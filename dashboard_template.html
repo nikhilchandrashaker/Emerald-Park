@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Emerald Park | The ballpark built for both sides</title>
+<style>
+:root{--bg:#06200e;--card:#0e3a1c;--card2:#145027;--line:#1f7038;--g1:#dcfce7;--g2:#86efac;--g3:#4ade80;--g4:#22c55e;--ink:#ecfdf3;--mut:#9fd8b2}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);background:#06200e radial-gradient(1100px 560px at 15% -8%,#14532d 0,#06200e 62%) no-repeat;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:24px 18px 60px}h1{font-size:36px;margin:6px 0 4px;letter-spacing:-.5px;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.45)}h2{font-size:20px;margin:34px 0 4px;color:var(--g2)}
+.sub{color:var(--mut);margin:0 0 6px}.pill{display:inline-block;background:var(--card2);border:1px solid var(--line);color:var(--g2);border-radius:99px;padding:2px 12px;font-size:12px;margin-right:6px}
+.grid{display:grid;gap:14px}.kpis{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));margin-top:18px}.two{grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+.card{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:14px;padding:16px}.kpi b{display:block;font-size:30px;color:var(--g3);line-height:1.1}.kpi span{color:var(--mut);font-size:13px}.kpi i{font-style:normal;font-size:12px;color:var(--g2)}
+.tag{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:#052e16;background:var(--g3);border-radius:4px;padding:1px 6px;margin-left:6px}.tag.p{background:var(--g1)}
+select,button{font:inherit;border-radius:9px;border:1px solid var(--line);background:#0a2d15;color:var(--ink);padding:8px 12px}button{background:var(--g4);color:#042a12;font-weight:700;cursor:pointer;border:0}button.alt{background:var(--card2);color:var(--g2);border:1px solid var(--line)}button:hover{filter:brightness(1.1)}
+canvas{max-width:100%}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:6px 8px;text-align:right;border-bottom:1px solid #1d5a31}th:first-child,td:first-child{text-align:left}th{color:var(--g2);font-weight:600}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}.log{font-size:14px;color:var(--g1);min-height:48px}.hl{color:var(--g3);font-weight:700}.note{font-size:12.5px;color:var(--mut)}
+.leg span{display:inline-flex;align-items:center;gap:6px;margin-right:14px;font-size:12.5px;color:var(--mut)}.leg em{width:11px;height:11px;border-radius:50%;display:inline-block}
+</style></head><body><div class="wrap">
+<span class="pill">Real data: Lahman 2019</span><span class="pill">207 MLB hitters</span><span class="pill">30 real parks</span>
+<h1>Emerald Park</h1>
+<p class="sub">A ballpark designed to help <b>hitters</b> (more home runs, more power) and <b>pitchers</b> (fewer hits on balls in play, more foul-ball outs) at the same time, while the run environment stays about neutral.</p>
+<div class="grid kpis" id="kpis"></div>
+
+<h2>Why it is both pitcher- and batter-friendly</h2>
+<p class="sub">Short pull-side alleys and a deep center field move home runs toward pull-power. Huge foul territory and a slow, lush grass infield take away hits.</p>
+<div class="grid two">
+ <div class="card"><canvas id="fieldStatic" width="560" height="430"></canvas><div class="leg"><span><em style="background:#4ade80"></em>Emerald Park fence</span><span><em style="background:#dcfce7"></em>League-average park</span></div></div>
+ <div class="card"><b>Effect vs. league-average park</b> (100 = no change)<canvas id="effChart" height="250"></canvas></div>
+</div>
+<div class="grid two" style="margin-top:14px">
+ <div class="card"><b>Where Emerald Park sits among 30 real parks</b><span class="tag">model</span><canvas id="scatter" height="290"></canvas><p class="note">The shaded zone means more home runs <i>and</i> fewer non-HR hits per ball in play. In this model no real park lands there.</p></div>
+ <div class="card"><b>Park design</b><table id="specT"></table><p class="note">Fence distances in feet at the left line, left alley, center, right alley and right line. Foul territory and infield speed are multipliers vs. a league-average park.</p></div>
+</div>
+
+<h2>Swing simulator</h2>
+<p class="sub">Pick a real 2019 hitter. Every swing is judged in <b>both</b> parks (same exit velocity, launch angle and spray angle), so you can see exactly which balls change.</p>
+<div class="card">
+ <div class="row"><select id="pl"></select><button id="b1">Swing once</button><button id="b25" class="alt">25 swings</button><button id="b600" class="alt">Simulate 600 PA</button></div>
+ <div class="grid two"><div><canvas id="field" width="640" height="470"></canvas>
+  <div class="leg"><span><em style="background:#bef264"></em>Home run (Emerald)</span><span><em style="background:#4ade80"></em>Hit</span><span><em style="background:#3f6b4b"></em>Out</span><span><em style="border:2px solid #fff;background:none"></em>Result differs from reference park</span></div></div>
+  <div><div class="log" id="log">Choose a player and swing.</div><table id="simT" style="margin-top:8px"></table><p class="note" id="simN"></p></div></div>
+</div>
+
+<h2>League impact</h2>
+<p class="sub">Every club's real 2019 lineup (top nine hitters by plate appearances) simulated for 5 full seasons of 2,430 games in each park.</p>
+<div class="grid two"><div class="card"><table id="leagueT"></table><p class="note">Averages over 5 simulated seasons. Real 2019 MLB: 9.66 runs per game (both teams).</p></div>
+ <div class="card"><b>Biggest home-run gainers</b> (HR per 600 PA)<canvas id="gain" height="270"></canvas></div></div>
+
+<h2>How it works and what to trust</h2>
+<div class="card note" style="font-size:13.5px">
+<b>Real data:</b> 2019 batting lines (Lahman Baseball Databank): each hitter's strikeout, walk and HBP rates are used as-is, and his home-run rate is matched exactly by fitting a power parameter. Park-run factors come from the real 2019 park factors for validation (model vs. Lahman park factor correlation across 30 parks: r = <span id="v1"></span>).
+<b>Modeled:</b> exit velocity, launch angle and spray angle (the Lahman data has no Statcast), flight distance from a drag-adjusted projectile model, fielding and hit probabilities. Real park dimensions are approximate public figures. Treat the exact percentages as model estimates, not predictions.</div>
+</div>
+<script>/*__CHARTJS__*/</script>
+<script>
+/*__DATA__*/
+const $=id=>document.getElementById(id),clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
+const REF=DATA.ref,EM=DATA.em,KC=DATA.K,L=DATA.league,FX=DATA.fx;
+const fmt=(x,d=1)=>Number(x).toFixed(d);
+function fence(dims,phi){const t=(clamp(phi,-45,45)+45)/22.5,i=Math.min(3,Math.floor(t)),f=t-i;return dims[i]*(1-f)+dims[i+1]*f}
+function randn(){let u=0;while(!u)u=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*Math.random())}
+function drawBall(p){const la=12+25*randn();let ev=clamp(88+p.s+14*randn()-.012*(la-17)**2,40,122);const side=p.b==='R'?1:p.b==='L'?-1:(Math.random()<.65?-1:1);
+ let phi=-side*clamp(10+.35*p.s,4,18)+23*randn();if(Math.abs(phi)>45)phi=Math.sign(phi)*(90-Math.abs(phi));return{la,ev,phi:clamp(phi,-45,45),u2:Math.random(),u3:Math.random(),uf:Math.random(),m:p.m}}
+function judge(b,pk){const{la,ev,phi}=b,D=fence(pk.dims,phi),Dr=fence(REF.dims,phi),d=la>=8?.68*Math.pow(ev*1.4667,2)*Math.sin(2*la*Math.PI/180)/32.174*pk.carry:0;
+ if(b.uf<.008*pk.foul)return{r:'FB',d,D};
+ const hr=la>=17&&la<=52&&d>=D+1.4*8;if(hr)return{r:'HR',d,D};
+ const gb=la<10,ld=la>=10&&la<25,near=d>=D-45&&!gb;let p;
+ if(gb)p=clamp(.17+.005*(ev-80),.05,.6)*pk.infield;else if(ld)p=near?.85:clamp(.62+.008*(ev-90),.15,.9);else p=near?Math.min(.15+.6*(d-(D-45))/45,.9):(la>50?.02:.09*Math.pow(D/Dr,1.5));
+ p=clamp(KC.c*b.m*p,0,.95);const t3=clamp(.03+.004*(D-375),.01,.3),p2=KC.a2*(near?.6:gb?.045:.16),p3=KC.a3*(near?t3:gb?.003:.02);
+ if(b.u2<p)return{r:b.u3<p3?'3B':b.u3<p3+p2?'2B':'1B',d,D};return{r:gb?'GO':'FO',d,D}}
+const isHit=r=>['1B','2B','3B','HR'].includes(r),NAMES={FB:'Foul-ball out',HR:'Home run','1B':'Single','2B':'Double','3B':'Triple',GO:'Groundout',FO:'Out in the air'};
+const COL=r=>r==='HR'?'#bef264':isHit(r)?'#4ade80':'#3f6b4b';
+/* field drawing */
+function field(cv,balls,showRef=true){const c=cv.getContext('2d'),W=cv.width,H=cv.height,cx=W/2,cy=H-18,sc=(H-50)/440,P=(d,phi)=>[cx+d*Math.sin(phi*Math.PI/180)*sc,cy-d*Math.cos(phi*Math.PI/180)*sc];
+ c.clearRect(0,0,W,H);const path=(dims,close)=>{c.beginPath();c.moveTo(cx,cy);for(let a=-45;a<=45;a+=1.5){const[x,y]=P(fence(dims,a),a);c.lineTo(x,y)}c.lineTo(cx,cy)};
+ path(EM.dims);const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,'#15803d');g.addColorStop(1,'#0f5c2a');c.fillStyle=g;c.fill();
+ c.save();path(EM.dims);c.clip();for(let r=0;r<22;r++){c.fillStyle=r%2?'rgba(255,255,255,.045)':'rgba(0,0,0,.05)';c.fillRect(0,cy-(r+1)*20*sc,W,20*sc)}
+ const[ax,ay]=P(95,0),[bx,by]=P(63.6,-45),[dx,dy]=P(63.6,45);c.fillStyle='#1f8a45';c.beginPath();c.moveTo(cx,cy);c.lineTo(bx,by);c.lineTo(ax,ay);c.lineTo(dx,dy);c.closePath();c.fill();c.restore();
+ c.strokeStyle='rgba(255,255,255,.55)';c.lineWidth=1.2;c.beginPath();for(const a of[-45,45]){c.moveTo(cx,cy);c.lineTo(...P(fence(EM.dims,a),a))}c.stroke();
+ if(showRef){c.setLineDash([6,5]);c.strokeStyle='#dcfce7';c.lineWidth=1.6;c.beginPath();for(let a=-45;a<=45;a+=1.5){const[x,y]=P(fence(REF.dims,a),a);a===-45?c.moveTo(x,y):c.lineTo(x,y)}c.stroke();c.setLineDash([])}
+ c.strokeStyle='#4ade80';c.lineWidth=3;c.beginPath();for(let a=-45;a<=45;a+=1.5){const[x,y]=P(fence(EM.dims,a),a);a===-45?c.moveTo(x,y):c.lineTo(x,y)}c.stroke();
+ c.fillStyle='#ecfdf3';c.font='12px system-ui';[[-45,'LF '+EM.dims[0]],[-22.5,EM.dims[1]],[0,'CF '+EM.dims[2]],[22.5,EM.dims[3]],[45,'RF '+EM.dims[4]]].forEach(([a,t])=>{const[x,y]=P(fence(EM.dims,a)+(a%45?0:0),a);c.textAlign=a<0?'left':a>0?'right':'center';c.fillText(t,x+(a<0?6:a>0?-6:0),y+(a===0?-8:14))});
+ for(const b of balls){const fb=b.e.r==='FB',pd=fb?85+(b.b.ev*7)%40:(b.e.d<60?85+(b.b.ev-60)*.9:(b.e.r==='HR'?b.e.d:Math.min(b.e.d,b.e.D-3))),[x,y]=P(clamp(pd,0,520),fb?(b.phi<0?-49:49):b.phi);c.beginPath();c.arc(x,y,b.big?7:5,0,7);c.fillStyle=COL(b.e.r);c.fill();c.lineWidth=2;c.strokeStyle=b.diff?'#fff':'rgba(0,0,0,.35)';c.stroke()}}
+/* static field */
+field($('fieldStatic'),[],true);
+/* KPIs */
+const R=L.REF,E=L.EMERALD,pc=(a,b)=>(100*(a/b-1)).toFixed(1).replace(/^(\d)/,'+$1')+'%';
+$('kpis').innerHTML=[['HR per game',fmt(E.HR_per_game,2),pc(E.HR_per_game,R.HR_per_game)+' vs '+fmt(R.HR_per_game,2),'b'],['Hits per game',fmt(E.H_per_game,1),pc(E.H_per_game,R.H_per_game)+' vs '+fmt(R.H_per_game,1),'p'],
+ ['BABIP factor',fmt(FX.BABIP,0),'100 = league-average park','p'],['Foul-ball outs / game',fmt(E.foul_outs_per_game,2),pc(E.foul_outs_per_game,R.foul_outs_per_game)+' vs '+fmt(R.foul_outs_per_game,2),'p'],
+ ['Runs per game',fmt(E.runs_per_game,2),pc(E.runs_per_game,R.runs_per_game)+' vs '+fmt(R.runs_per_game,2)+' (neutral)','b']].map(k=>`<div class="card kpi"><span>${k[0]}<em class="tag ${k[3]==='p'?'p':''}">${k[3]==='p'?'pitcher':'batter'}</em></span><b>${k[1]}</b><i>${k[2]}</i></div>`).join('');
+$('kpis').lastChild.querySelector('.tag').textContent='neutral';
+$('specT').innerHTML='<tr><th></th><th>Emerald</th><th>League avg</th></tr>'+['LF line','LF alley','Center','RF alley','RF line'].map((n,i)=>`<tr><td>${n}</td><td>${EM.dims[i]} ft</td><td>${fmt(REF.dims[i],0)} ft</td></tr>`).join('')+`<tr><td>Foul territory</td><td>${EM.foul}x</td><td>1.0x</td></tr><tr><td>Infield speed</td><td>${EM.infield}x</td><td>1.0x</td></tr><tr><td>Wall height</td><td>8 ft</td><td>8 ft</td></tr>`;
+$('v1').textContent=DATA.val.corr;
+/* charts */
+Chart.defaults.color='#bbf7d0';Chart.defaults.borderColor='rgba(134,239,172,.15)';
+const eff=[['Home runs',FX.HR_PA,'b'],['Isolated power',FX.ISO,'b'],['Extra-base hits',FX.XBH_PA,'b'],['Run scoring',FX.runs,'n'],['Batting average',FX.AVG,'p'],['BABIP',FX.BABIP,'p']];
+new Chart($('effChart'),{type:'bar',data:{labels:eff.map(e=>e[0]),datasets:[{data:eff.map(e=>+(e[1]-100).toFixed(1)),backgroundColor:eff.map(e=>e[2]==='b'?'#4ade80':e[2]==='p'?'#dcfce7':'#15803d')}]},
+ options:{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.raw>0?'+':'')+c.raw+'% vs league park'}}},scales:{x:{title:{display:true,text:'% change (green = batter-friendly, pale = pitcher-friendly)'}}}}});
+const zone={id:'zone',beforeDatasetsDraw(ch){const{ctx,chartArea:a,scales:{x,y}}=ch;ctx.save();ctx.fillStyle='rgba(74,222,128,.13)';ctx.fillRect(x.getPixelForValue(100),y.getPixelForValue(100),a.right-x.getPixelForValue(100),a.bottom-y.getPixelForValue(100));ctx.restore()}};
+const pk=DATA.parks;new Chart($('scatter'),{type:'scatter',plugins:[zone],data:{datasets:[{label:'MLB parks',data:pk.filter(p=>!['REF','EMERALD'].includes(p.c)).map(p=>({x:p.hr,y:p.babip,c:p.c})),backgroundColor:'#86efac',pointRadius:5},{label:'Emerald Park',data:pk.filter(p=>p.c==='EMERALD').map(p=>({x:p.hr,y:p.babip,c:'Emerald'})),backgroundColor:'#bef264',pointRadius:10,pointStyle:'star'}]},
+ options:{plugins:{tooltip:{callbacks:{label:c=>`${c.raw.c}: HR ${c.raw.x}, BABIP ${c.raw.y}`}}},scales:{x:{title:{display:true,text:'Home-run factor (higher = batter-friendly)'}},y:{title:{display:true,text:'BABIP factor (lower = pitcher-friendly)'},reverse:false}}}});
+new Chart($('gain'),{type:'bar',data:{labels:DATA.gain.map(g=>g.n),datasets:[{data:DATA.gain.map(g=>g.d),backgroundColor:'#4ade80'}]},options:{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`+${c.raw} HR (${DATA.gain[c.dataIndex].ref} to ${DATA.gain[c.dataIndex].em})`}}}}});
+/* league table */
+const rows=[['Runs / game','runs_per_game',2],['HR / game','HR_per_game',2],['Hits / game','H_per_game',2],['Doubles / game','doubles_per_game',2],['Triples / game','triples_per_game',2],['Strikeouts / game','K_per_game',1],['Foul-ball outs / game','foul_outs_per_game',2],['Extra-inning games %','extra_inning_pct',1]];
+$('leagueT').innerHTML='<tr><th></th><th>League park</th><th>Emerald</th><th>Change</th></tr>'+rows.map(r=>`<tr><td>${r[0]}</td><td>${fmt(R[r[1]],r[2])}</td><td>${fmt(E[r[1]],r[2])}</td><td class="hl">${pc(E[r[1]],R[r[1]])}</td></tr>`).join('');
+/* swing sim */
+const sel=$('pl');DATA.players.forEach((p,i)=>sel.add(new Option(`${p.n} (${p.t}), ${p.hr} HR in 2019`,i)));
+const cur=()=>DATA.players[sel.value];let shown=[];
+function mk(b,p){const a=judge(b,REF),e=judge(b,EM);return{phi:b.phi,a,e,diff:a.r!==e.r,b}}
+function describe(x){const side=x.phi<0?'left':'right';return `${fmt(x.b.ev,1)} mph, ${fmt(x.b.la,0)}&deg; launch, toward ${side} field, ${fmt(x.e.d,0)} ft carry`}
+$('b1').onclick=()=>{const x=mk(drawBall(cur()));x.big=1;shown=[x];field($('field'),shown);
+ $('log').innerHTML=`${describe(x)}<br>League park (fence ${fmt(x.a.D,0)} ft): <b>${NAMES[x.a.r]}</b><br>Emerald Park (fence ${fmt(x.e.D,0)} ft): <span class="hl">${NAMES[x.e.r]}</span>${x.diff?' &larr; different result':''}`};
+$('b25').onclick=()=>{const p=cur();shown=[];for(let i=0;i<25;i++)shown.push(mk(drawBall(p)));field($('field'),shown);const hr=r=>shown.filter(x=>x[r].r==='HR').length,ch=shown.filter(x=>x.diff).length;
+ $('log').innerHTML=`25 batted balls for ${p.n}: <b>${hr('a')}</b> HR in the league park, <span class="hl">${hr('e')}</span> HR in Emerald Park. ${ch} swings had a different result.`};
+$('b600').onclick=()=>{const p=cur(),t={a:{},e:{}};for(const k of['a','e'])t[k]={HR:0,'3B':0,'2B':0,'1B':0,BB:0,K:0,FO:0,GO:0,FB:0};shown=[];
+ for(let i=0;i<600;i++){const u=Math.random();let o=null;if(u<p.k)o='K';else if(u<p.k+p.bb+p.hb)o='BB';
+  if(o){t.a[o]++;t.e[o]++;continue}const b=drawBall(p),x=mk(b);t.a[x.a.r==='GO'?'GO':x.a.r]++;t.e[x.e.r==='GO'?'GO':x.e.r]++;if(i%12===0)shown.push(x)}
+ field($('field'),shown);const row=(k,n)=>{const ab=600-k.BB,h=k['1B']+k['2B']+k['3B']+k.HR;return[k.HR,h,h/ab,(k['1B']+2*k['2B']+3*k['3B']+4*k.HR)/ab,k['2B'],k['3B']]};
+ const A=row(t.a),B=row(t.e),act=[p.hr,p.h,p.h/p.ab,(p.h+p.d2+2*p.d3+3*p.hr)/p.ab,p.d2,p.d3];const f=(v,i)=>i===2||i===3?v.toFixed(3).replace(/^0/,''):Math.round(v*(i===9?1:1));
+ $('simT').innerHTML='<tr><th></th><th>League park</th><th>Emerald</th><th>2019 actual*</th></tr>'+['HR','H','AVG','SLG','2B','3B'].map((n,i)=>`<tr><td>${n}</td><td>${f(A[i],i)}</td><td class="hl">${f(B[i],i)}</td><td>${f(act[i]*(i<2||i>3?600/p.pa:1),i)}</td></tr>`).join('');
+ $('simN').textContent='600 simulated plate appearances (one random season; rerun to see variation). *2019 actual scaled to 600 PA, played in his real home park. Dots show a sample of the batted balls.';
+ $('log').innerHTML=`${p.n}: ${B[0]-A[0]>=0?'+':''}${B[0]-A[0]} HR in Emerald Park this simulated season.`};
+$('b25').click();
+</script></body></html>
